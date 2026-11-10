@@ -1,0 +1,284 @@
+\chapter{Tìm hiểu các thuật toán AES-GCM, RSA-OAEP và Argon2id}
+
+\section{Thuật toán AES-GCM}
+
+\noindent\textbf{Hiểu đơn giản:} AES-GCM giống như cho nội dung vào một phong bì khóa kín và gắn thêm một dấu kiểm. Người có đúng khóa mới đọc được nội dung; khi phong bì hoặc dữ liệu đi kèm bị thay đổi, dấu kiểm sẽ không khớp. Trong thuật toán, phần mã hóa tạo ra bản mã, còn thẻ xác thực giúp phát hiện sửa đổi. Mỗi lần dùng cùng một khóa phải có IV riêng; dùng lại IV có thể làm mất an toàn.
+
+\subsection{Tổng quan và Lịch sử}
+\textbf{AES-GCM} là sự kết hợp giữa thuật toán mã hóa \textbf{AES} (Advanced Encryption Standard) và chế độ hoạt động \textbf{GCM} (Galois/Counter Mode). Đây là một chuẩn mã hóa xác thực (Authenticated Encryption with Associated Data - AEAD), nghĩa là nó cung cấp đồng thời hai tính chất bảo mật trong một thao tác duy nhất:
+\begin{itemize}
+    \item \textbf{Tính bí mật (Confidentiality):} Đảm bảo nội dung thông tin không bị lộ.
+    \item \textbf{Tính toàn vẹn và xác thực (Integrity \& Authenticity):} Cho phép phát hiện việc sửa đổi bản mã và AAD, đồng thời xác nhận chúng được tạo dưới cùng khóa bí mật; thuật toán không tự xác minh danh tính người gửi.
+\end{itemize}
+
+AES được NIST công bố trong FIPS 197 năm 2001. GCM được chuẩn hóa trong NIST SP 800-38D năm 2007. GCM kết hợp chế độ đếm để mã hóa với phép băm trên trường hữu hạn để xác thực bản mã và AAD; tính an toàn đòi hỏi mỗi IV phải duy nhất đối với cùng một khóa và phải kiểm tra thẻ trước khi chấp nhận bản rõ \cite{gcmnist}.
+
+\subsection{Cơ chế hoạt động}
+AES-GCM (Galois/Counter Mode) được cấu thành từ hai thành phần chính hoạt động phối hợp:
+\begin{itemize}
+    \item \textbf{AES-CTR (Counter Mode):} Chịu trách nhiệm mã hóa dữ liệu (Confidentiality).
+    \item \textbf{GHASH (Galois HASH):} Tính giá trị băm trên AAD và bản mã; giá trị này được kết hợp với AES để tạo thẻ xác thực.
+\end{itemize} 
+
+\subsubsection{Quy trình Mã hóa (Encryption)}
+Quy trình này chuyển đổi văn bản gốc (\textit{Plaintext}) thành văn bản mã hóa (\textit{Ciphertext}) và tạo ra một thẻ xác thực (\textit{Authentication Tag}).
+
+\paragraph{Bước 1: Khởi tạo Bộ đếm (Counter Initialization)}
+Từ IV, thuật toán tạo khối ban đầu $J_0$ dài 128 bit. Với IV dài 96 bit, $J_0=IV\parallel 0^{31}\parallel 1$; với IV có độ dài khác, $J_0$ được tính bằng GHASH theo đặc tả. Các khối đếm dùng cho dữ liệu là $J_i$ với $i\geq1$:
+\begin{itemize}
+    \item Mỗi khối tiếp theo được tạo bằng cách tăng 32 bit cuối của khối trước, theo modulo $2^{32}$:
+    \begin{equation}
+        J_i = \operatorname{inc32}(J_{i-1}),\qquad i\geq1.
+    \end{equation}
+    \item Không dùng $J_0$ làm khối dòng khóa đầu tiên của bản rõ. Các khối đếm độc lập cho phép xử lý song song trong giới hạn độ dài GCM quy định \cite{gcmnist}.
+\end{itemize}
+
+\paragraph{Bước 2: Tạo Dòng khóa (Keystream Generation)}
+Các khối đếm $J_1, J_2, \dots$ được đưa qua thuật toán AES với khóa bí mật $K$ để tạo ra dòng khóa (\textit{Keystream}):
+\begin{equation}
+    S_i = \text{AES}_K(J_i)
+\end{equation}
+
+\paragraph{Bước 3: Mã hóa dữ liệu (XOR)}
+Văn bản gốc $P$ được chia thành các khối dài tối đa 128 bit; khối cuối có thể ngắn hơn. XOR mỗi khối với đúng số bit đầu của dòng khóa tương ứng:
+\begin{equation}
+    C_i=P_i\oplus\operatorname{MSB}_{\operatorname{len}(P_i)}(S_i).
+\end{equation}
+
+\subsubsection{Quy trình Xác thực (Authentication)}
+Bước này tính giá trị GHASH trên trường $GF(2^{128})$, rồi kết hợp kết quả với $\operatorname{AES}_K(J_0)$ để tạo thẻ xác thực. Bản thân GHASH không phải là thẻ xác thực cuối cùng \cite{gcmnist}.
+
+\paragraph{Bước 1: Chuẩn bị dữ liệu}
+Dữ liệu được ghép theo đúng thứ tự trước khi đưa vào GHASH:
+\begin{itemize}
+    \item \textbf{AAD ($A$):} Dữ liệu cần xác thực nhưng không mã hóa, chẳng hạn một số trường của header.
+    \item \textbf{Bản mã ($C$):} Dữ liệu sau bước mã hóa bằng chế độ đếm.
+    \item \textbf{Khối độ dài:} Hai số nguyên 64 bit biểu diễn độ dài \emph{theo bit} của $A$ và $C$, theo thứ tự đó.
+\end{itemize}
+AAD và bản mã được đệm riêng bằng các bit 0 đến ranh giới khối 128 bit (không thêm khối đệm nếu đã đủ khối). Chuỗi đầu vào là
+\begin{equation}
+    X=A\parallel 0^{v}\parallel C\parallel 0^{u}
+      \parallel [\operatorname{len}(A)]_{64}
+      \parallel [\operatorname{len}(C)]_{64},
+\end{equation}
+trong đó $v$ và $u$ là số bit 0 cần đệm tương ứng. Hai trường độ dài giúp phân định ranh giới giữa $A$ và $C$.
+
+\paragraph{Bước 2: Tính toán GHASH}
+Khóa băm phụ là $H=\operatorname{AES}_K(0^{128})$, tức AES mã hóa \emph{một khối 128 bit toàn số 0}, không phải phép gọi AES với khóa bằng 0. Chia $X$ thành các khối 128 bit $X_1,\ldots,X_n$; đặt $Y_0=0^{128}$ và lần lượt tính
+\begin{equation}
+    Y_i=(Y_{i-1}\oplus X_i)\cdot H,\qquad i=1,\ldots,n,
+\end{equation}
+với phép nhân trong $GF(2^{128})$. Kết quả GHASH là $Y_n$ \cite{gcmnist}.
+
+\paragraph{Bước 3: Tạo Tag cuối cùng}
+Giá trị $J_0$ là khối đếm ban đầu được suy ra từ IV; với IV 96 bit, $J_0=IV\parallel 0^{31}\parallel 1$. Khối này chỉ dùng để che kết quả GHASH, còn mã hóa dữ liệu bắt đầu từ $\operatorname{inc32}(J_0)$. Thẻ có độ dài $t$ bit được tính bằng
+\begin{equation}
+    T=\operatorname{MSB}_{t}\!\left(Y_n\oplus\operatorname{AES}_K(J_0)\right).
+\end{equation}
+Ký hiệu $\operatorname{MSB}_{t}$ là lấy $t$ bit đầu của kết quả. IV phải không bị dùng lại với cùng khóa $K$ \cite{gcmnist}.
+
+\subsubsection{Quy trình Giải mã và Kiểm tra (Decryption \& Verification)}
+Khi người nhận nhận được $\{C, IV, T\}$ và AAD $A$ tương ứng, hệ thống thực hiện:
+
+\paragraph{Bước 1: Kiểm tra tính toàn vẹn (Verification)}
+Hệ thống tính lại $T'$ từ $A$, $C$, $IV$ và khóa $K$ theo đúng quy trình trên, rồi so sánh với $T$.
+\begin{itemize}
+    \item Nếu $T' \neq T$: \textbf{Báo lỗi và không trả bản rõ}. Có thể do dữ liệu sai lệch, sai khóa hoặc sai AAD.
+    \item Nếu $T' = T$: Chấp nhận bản mã và AAD là hợp lệ dưới khóa $K$, sau đó trả về bản rõ.
+\end{itemize}
+
+\paragraph{Bước 2: Giải mã (Decryption)}
+Hệ thống tái tạo dòng khóa từ $IV$ và $K$, sau đó XOR số bit tương ứng để lấy lại bản rõ. Một triển khai có thể tính bản rõ trước khi kiểm tra thẻ, nhưng chỉ được trả bản rõ khi thẻ hợp lệ \cite{gcmnist}:
+\begin{equation}
+    P_i=C_i\oplus\operatorname{MSB}_{\operatorname{len}(C_i)}(S_i).
+\end{equation}
+
+\subsubsection{Tóm tắt mô hình toán học}
+\begin{align*}
+    \textbf{Mã hóa:} & \quad C=\operatorname{GCTR}_K(J_1,P) \\
+    \textbf{Giải mã:} & \quad P=\operatorname{GCTR}_K(J_1,C) \\
+    \textbf{Tạo Tag:} & \quad T = \operatorname{MSB}_{t}\!\left(\operatorname{GHASH}_{H}(X)\oplus\operatorname{AES}_K(J_0)\right),
+\end{align*}
+
+
+\section{Thuật toán RSA-OAEP}
+
+\noindent\textbf{Hiểu đơn giản:} RSA-OAEP dùng khóa công khai của người nhận để khóa một thông điệp ngắn, thường là khóa phiên. Chỉ khóa riêng tương ứng mới mở được. OAEP thêm phần ngẫu nhiên và cấu trúc đệm trước khi áp dụng RSA, nên mã hóa hai lần cùng một thông điệp thường cho hai bản mã khác nhau. Nó không phù hợp để mã hóa trực tiếp cả tệp hoặc chuỗi tin nhắn dài.
+
+\subsection{Tổng quan và Lịch sử }
+
+\textbf{RSA-OAEP} là lược đồ mã hóa khóa công khai kết hợp giữa thuật toán \textbf{RSA} và cơ chế đệm \textbf{OAEP} (Optimal Asymmetric Encryption Padding). OAEP sử dụng hàm băm và dữ liệu ngẫu nhiên để tạo cấu trúc đầu vào trước phép toán RSA.
+
+RSA-OAEP phù hợp để mã hóa dữ liệu ngắn, chẳng hạn một khóa đối xứng. Nó không thích hợp để mã hóa trực tiếp thông điệp lớn vì giới hạn độ dài và chi phí tính toán của RSA. Chỉ bên giữ private key tương ứng mới giải mã được bản mã tạo bởi public key.
+
+RSA nguyên bản có tính xác định: cùng khóa và cùng thông điệp luôn cho cùng bản mã. OAEP thêm một seed ngẫu nhiên và hai phép tạo mặt nạ trước phép toán RSA, nhờ đó mã hóa cùng thông điệp có thể cho các bản mã khác nhau. RFC 8017 đặc tả lược đồ RSAES-OAEP và các điều kiện kiểm tra khi giải mã \cite{rsa8017}.
+\subsection{Cơ chế hoạt động}
+
+RSAES-OAEP là lược đồ mã hóa khóa công khai được thiết kế để chống tấn công bản mã lựa chọn trong mô hình và các giả thiết mật mã của đặc tả. Tính an toàn còn phụ thuộc vào triển khai, chất lượng ngẫu nhiên, lựa chọn hàm băm và cách xử lý lỗi \cite{rsa8017}.
+
+Cơ chế này bao gồm hai giai đoạn chính: Biến đổi OAEP (Padding) và Hàm RSA (Primitive).
+
+\subsubsection{Cấu trúc Khối dữ liệu (Data Block Structure)}
+Trước khi mã hóa, thông điệp $M$ (ví dụ một khóa phiên) được nhúng vào khối dữ liệu $DB$. Gọi $k$ là độ dài mô-đun RSA theo byte và $hLen$ là độ dài đầu ra của hàm băm theo byte. Điều kiện đầu vào là $\operatorname{len}(M)\leq k-2hLen-2$; nếu không, thuật toán báo lỗi ``message too long'' \cite{rsa8017}.
+\begin{equation}
+    DB = \text{lHash} \parallel PS \parallel \texttt{0x01} \parallel M
+\end{equation}
+Trong đó:
+\begin{itemize}
+    \item \textbf{lHash:} Mã băm của nhãn tùy chọn $L$ (thường rỗng). $\text{lHash} = \text{Hash}(L)$.
+    \item \textbf{PS (Padding String):} Chuỗi các byte \texttt{0x00} để điền đầy kích thước khối.
+    \item \textbf{\texttt{0x01}:} Byte phân cách (sentinel) để xác định điểm bắt đầu của thông điệp.
+    \item \textbf{M:} Thông điệp cần mã hóa, có độ dài nằm trong giới hạn nêu trên.
+\end{itemize}
+
+\subsubsection{Quy trình Mã hóa (Encryption Operation)}
+Quy trình mã hóa biến đổi thông điệp $M$ thành bản mã $C$ sử dụng khóa công khai $(n, e)$.
+
+\paragraph{Bước 1: Đệm dữ liệu (OAEP Encoding)}
+Hệ thống dùng hai phép tạo mặt nạ, thường là MGF1, để mã hóa OAEP:
+\begin{enumerate}
+    \item Tạo một chuỗi \textbf{seed} ngẫu nhiên dài $hLen$ byte từ bộ sinh số ngẫu nhiên mật mã.
+    \item Sử dụng hàm tạo mặt nạ \textbf{MGF} (Mask Generation Function) để tạo mặt nạ cho khối dữ liệu $DB$:
+    \begin{equation}
+        \text{dbMask} = \text{MGF}(\text{seed}, \text{k} - hLen - 1)
+    \end{equation}
+    \item Che giấu khối dữ liệu bằng phép XOR:
+    \begin{equation}
+        \text{maskedDB} = DB \oplus \text{dbMask}
+    \end{equation}
+    \item Tạo mặt nạ cho seed từ kết quả vừa tính:
+    \begin{equation}
+        \text{seedMask} = \text{MGF}(\text{maskedDB}, hLen)
+    \end{equation}
+    \item Che giấu seed:
+    \begin{equation}
+        \text{maskedSeed} = \text{seed} \oplus \text{seedMask}
+    \end{equation}
+    \item Ghép nối kết quả thành thông điệp đã mã hóa $EM$:
+    \begin{equation}
+        EM = \texttt{0x00} \parallel \text{maskedSeed} \parallel \text{maskedDB}
+    \end{equation}
+\end{enumerate}
+
+\paragraph{Bước 2: Mã hóa RSA (RSA Primitive)}
+Chuyển đổi chuỗi byte $EM$ thành số nguyên $m$ theo quy ước OS2IP và thực hiện phép tính mũ RSA:
+\begin{equation}
+    C = m^e \pmod n
+\end{equation}
+Chuyển số nguyên $C$ thành chuỗi byte dài đúng $k$ theo quy ước I2OSP. Chuỗi này là bản mã RSAES-OAEP; nếu $M$ là một khóa phiên thì có thể gọi là khóa được bọc (\textit{wrapped key}) \cite{rsa8017}.
+
+\subsubsection{Quy trình Giải mã (Decryption Operation)}
+Người nhận sử dụng khóa bí mật $d$ để khôi phục thông điệp $M$.
+
+\paragraph{Bước 1: Giải mã RSA}
+Trước hết kiểm tra bản mã đầu vào dài đúng $k$ byte và giá trị số nguyên $c$ của nó thỏa $0\leq c<n$. Sau đó thực hiện phép tính mũ ngược:
+\begin{equation}
+    m = c^d \pmod n
+\end{equation}
+Chuyển số nguyên $m$ thành chuỗi byte $EM$ dài đúng $k$ byte bằng I2OSP; quy tắc này thêm các byte 0 ở đầu khi cần. Độ dài không phải là một điều kiện kiểm tra sau khi chuyển đổi \cite{rsa8017}.
+
+\paragraph{Bước 2: Giải mã OAEP (OAEP Decoding)}
+Hệ thống thực hiện đảo ngược quy trình Feistel để tách biệt seed và khối dữ liệu:
+\begin{enumerate}
+    \item Tách $EM$ thành $Y \parallel \text{maskedSeed} \parallel \text{maskedDB}$. Kiểm tra byte đầu tiên $Y$ phải là \texttt{0x00}.
+    \item Khôi phục seed:
+    \begin{equation}
+        \text{seed} = \text{maskedSeed} \oplus \text{MGF}(\text{maskedDB}, hLen)
+    \end{equation}
+    \item Khôi phục khối dữ liệu $DB$:
+    \begin{equation}
+        DB = \text{maskedDB} \oplus \text{MGF}(\text{seed}, k - hLen - 1)
+    \end{equation}
+\end{enumerate}
+
+\paragraph{Bước 3: Kiểm tra cấu trúc và trích xuất}
+Hệ thống phân tích cú pháp khối $DB$ để lấy lại thông điệp:
+\begin{equation}
+    DB = \text{lHash}' \parallel PS \parallel \texttt{0x01} \parallel M
+\end{equation}
+\begin{itemize}
+    \item So sánh $\text{lHash}'$ với giá trị băm của nhãn đã biết.
+    \item Kiểm tra mọi byte trong $PS$ đều bằng \texttt{0x00}, rồi tìm byte phân cách \texttt{0x01}.
+\end{itemize}
+Nếu bất kỳ kiểm tra nào thất bại, trả về cùng một lỗi giải mã và không để lộ chi tiết về cấu trúc đệm. Nếu thành công, phần dữ liệu sau \texttt{0x01} là thông điệp $M$; chỉ là khóa phiên khi ứng dụng đã đưa khóa phiên vào để mã hóa \cite{rsa8017}.
+
+\subsubsection{Tính an toàn của OAEP}
+Seed ngẫu nhiên làm phép mã hóa không có tính xác định như RSA nguyên bản. Cấu trúc $DB$ cho phép kiểm tra nhãn và định dạng sau giải mã; bản mã bị sửa thường sẽ không vượt qua các kiểm tra này. Tuy nhiên, không thể khẳng định mọi thay đổi một bit đều luôn bị phát hiện, và RSAES-OAEP tự nó không xác thực danh tính người gửi. Triển khai phải trả lỗi đồng nhất khi giải mã thất bại, tránh tạo kênh rò rỉ từ thông báo lỗi hoặc thời gian xử lý \cite{rsa8017}.
+
+
+
+\section{Thuật toán Argon2id}
+
+\noindent\textbf{Hiểu đơn giản:} Argon2id biến một mật khẩu thành chuỗi byte có thể dùng làm vật liệu khóa. Nó cố ý tiêu tốn thời gian và bộ nhớ, khiến việc thử hàng loạt mật khẩu trở nên tốn kém hơn. Salt là một giá trị riêng đi kèm mỗi lần dẫn xuất, giúp cùng một mật khẩu không luôn cho cùng kết quả. Argon2id không tự mã hóa dữ liệu; việc mã hóa là nhiệm vụ của thuật toán khác.
+
+\subsection{Tổng quan và mục đích}
+\textbf{Argon2id} là một biến thể của Argon2, hàm dẫn xuất khóa từ mật khẩu có chi phí bộ nhớ cao (\textit{memory-hard password-based key derivation function}). Argon2 được mô tả trong RFC 9106. Thuật toán nhận mật khẩu có thể bị người dùng chọn yếu và tạo ra một chuỗi byte có độ dài xác định; chuỗi này có thể được dùng làm vật liệu khóa hoặc giá trị để kiểm tra mật khẩu, tùy mục đích của hệ thống \cite{argon2rfc}.
+
+Khác với một hàm băm thông thường được thiết kế để tính thật nhanh, Argon2id cho phép đặt mức sử dụng bộ nhớ và thời gian tính toán. Mỗi lần thử một mật khẩu ứng viên đều phải chịu chi phí đó. Đây là đặc điểm quan trọng khi kẻ tấn công có thể lấy được dữ liệu lưu trữ và thử mật khẩu ngoại tuyến với số lượng lớn.
+
+\subsection{Các biến thể của Argon2}
+Argon2 có ba biến thể, khác nhau chủ yếu ở cách xác định vị trí khối bộ nhớ sẽ được tham chiếu trong quá trình tính toán \cite{argon2rfc}:
+\begin{itemize}
+    \item \textbf{Argon2d:} Vị trí truy cập bộ nhớ phụ thuộc vào dữ liệu đã tính. Cách này làm tăng chi phí của một số kiểu tấn công đánh đổi thời gian và bộ nhớ, nhưng mẫu truy cập có thể lộ thông tin qua kênh kề như thời gian hoặc bộ nhớ đệm.
+    \item \textbf{Argon2i:} Vị trí truy cập được xác định độc lập với mật khẩu và nội dung các khối. Nhờ đó mẫu truy cập khó làm lộ dữ liệu bí mật hơn, đổi lại đặc tính chống một số kiểu đánh đổi thời gian và bộ nhớ khác với Argon2d.
+    \item \textbf{Argon2id:} Kết hợp hai cách trên. Nửa đầu của lượt điền bộ nhớ thứ nhất dùng cách truy cập của Argon2i; phần còn lại dùng cách của Argon2d. Đây là biến thể được RFC 9106 yêu cầu các triển khai tuân thủ phải hỗ trợ.
+\end{itemize}
+
+\subsection{Đầu vào và các tham số}
+Có thể biểu diễn đầu ra của quá trình dẫn xuất dưới dạng:
+\begin{equation}
+    K_{\mathrm{out}} = \operatorname{Argon2id}(P,S,m,t,p,\tau),
+\end{equation}
+trong đó $P$ là mật khẩu, $S$ là salt và $\tau$ là độ dài đầu ra mong muốn. Đây là ký hiệu rút gọn: đặc tả còn cho phép đưa vào khóa bí mật tùy chọn và dữ liệu liên kết tùy chọn \cite{argon2rfc}.
+
+\begin{table}[htbp]
+\centering
+\caption{Ý nghĩa các đầu vào chính của Argon2id}
+\begin{tabular}{>{\raggedright\arraybackslash}p{2.0cm} >{\raggedright\arraybackslash}p{10.2cm}}
+\toprule
+\textbf{Ký hiệu} & \textbf{Ý nghĩa} \\
+\midrule
+$P$ & Mật khẩu hoặc cụm mật khẩu cần dẫn xuất. \\
+$S$ & Salt: chuỗi byte được tạo riêng cho mỗi lần thiết lập khóa hoặc mỗi bản ghi. Salt không cần giữ bí mật, nhưng cần đủ ngẫu nhiên để tránh trùng lặp. \\
+$m$ & Dung lượng bộ nhớ yêu cầu, tính theo KiB. Thuật toán làm tròn xuống thành $m'=4p\lfloor m/(4p)\rfloor$ khối, mỗi khối 1 KiB. \\
+$t$ & Số lượt xử lý toàn bộ vùng bộ nhớ (\textit{passes}). \\
+$p$ & Mức song song: số làn bộ nhớ (\textit{lanes}) có thể được xử lý song song. \\
+$\tau$ & Số byte đầu ra cần tạo. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Salt khác nhau làm cho cùng một mật khẩu cho các đầu ra khác nhau. Nó ngăn việc dùng trực tiếp một bảng giá trị tính sẵn cho nhiều bản ghi, nhưng không làm mật khẩu yếu trở thành mật khẩu mạnh. Các tham số $m$, $t$, $p$ và độ dài đầu ra cần được lưu hoặc truyền cùng dữ liệu cần tái tạo khóa: thay đổi chúng sẽ dẫn đến đầu ra khác ngay cả khi mật khẩu và salt không đổi \cite{argon2rfc}.
+
+\subsection{Cơ chế dẫn xuất khóa}
+Theo RFC 9106, phép tính gồm khởi tạo trạng thái, điền các khối bộ nhớ qua nhiều lượt và kết xuất đầu ra. Phần dưới đây trình bày luồng xử lý ở mức khái niệm; các công thức đánh chỉ số và hàm nén đầy đủ được định nghĩa trong đặc tả \cite{argon2rfc}.
+
+\subsubsection{Bước 1: Khởi tạo trạng thái}
+Thuật toán mã hóa theo định dạng byte xác định các tham số, mật khẩu, salt và các đầu vào tùy chọn, rồi băm chúng bằng BLAKE2b để tạo giá trị ban đầu $H_0$. Việc đưa cả tham số vào trạng thái khởi tạo ràng buộc kết quả với đúng cấu hình đã chọn. Từ $H_0$, thuật toán tạo hai khối đầu tiên cho mỗi làn bộ nhớ.
+
+\subsubsection{Bước 2: Tổ chức vùng bộ nhớ}
+Vùng nhớ thực dùng gồm $m'$ khối 1 KiB, sắp thành $p$ làn; mỗi làn có $q=m'/p$ khối. Mỗi làn được chia tiếp thành bốn đoạn (\textit{segments}); các đoạn cùng vị trí trên các làn tạo thành một lát (\textit{slice}). Thuật toán xử lý lần lượt theo lát để chỉ tham chiếu đến những khối đã được tạo theo quy tắc của đặc tả. Cấu trúc này hỗ trợ xử lý song song và tạo chi phí bộ nhớ cho mỗi lần tính \cite{argon2rfc}.
+
+\subsubsection{Bước 3: Điền và cập nhật các khối}
+Với mỗi khối mới, thuật toán kết hợp khối liền trước trong làn với một khối tham chiếu đã được chọn, rồi đưa chúng qua hàm nén $G$. Có thể mô tả giản lược một khối ở lượt đầu như sau:
+\begin{equation}
+    B_{i,j}=G\bigl(B_{i,j-1},B_{\mathrm{ref}}\bigr).
+\end{equation}
+Ở các lượt sau, giá trị khối cũ còn được XOR vào kết quả mới. Khối tham chiếu $B_{\mathrm{ref}}$ có thể nằm ở làn hiện tại hoặc làn khác theo các ràng buộc về thứ tự đã tính. Hàm nén sử dụng các phép toán trên từ 64 bit dựa trên thiết kế BLAKE2; vì vậy phép tính không đơn thuần là đọc rồi ghi một mảng bộ nhớ.
+
+Điểm phân biệt \textbf{Argon2id} nằm ở cách chọn khối tham chiếu: trong hai lát đầu tiên của lượt thứ nhất, địa chỉ được tạo độc lập với dữ liệu bí mật như Argon2i. Từ lát thứ ba của lượt thứ nhất và trong các lượt tiếp theo, địa chỉ phụ thuộc vào dữ liệu như Argon2d. Nói cách khác, nửa đầu lượt đầu dùng cách truy cập độc lập dữ liệu, còn phần còn lại dùng cách truy cập phụ thuộc dữ liệu \cite{argon2rfc}.
+
+\subsubsection{Bước 4: Kết xuất đầu ra}
+Sau khi hoàn tất $t$ lượt, thuật toán XOR khối cuối cùng của từng làn để có khối tổng hợp $C$:
+\begin{equation}
+    C=B_{0,\mathrm{last}}\oplus B_{1,\mathrm{last}}\oplus\cdots\oplus B_{p-1,\mathrm{last}}.
+\end{equation}
+Hàm băm đầu ra có độ dài biến đổi $H'$ xử lý $C$ để tạo chuỗi $K_{\mathrm{out}}$ dài $\tau$ byte. Vì đầu ra phụ thuộc vào mật khẩu, salt và toàn bộ cấu hình, bên cần tái tạo khóa phải dùng đúng các giá trị ban đầu.
+
+\subsection{Đặc điểm an toàn và giới hạn}
+\begin{itemize}
+    \item \textbf{Chi phí bộ nhớ:} Tăng $m$ làm tăng lượng bộ nhớ cần dùng cho mỗi lần đoán mật khẩu. Nếu cố dùng ít bộ nhớ hơn, kẻ tấn công phải tính lại các khối bị thiếu và thường phải trả thêm chi phí thời gian. Tăng $t$ làm tăng số lượt xử lý; tăng $p$ thay đổi mức song song. Giá trị phù hợp cần được chọn theo tài nguyên và thời gian chấp nhận được của môi trường sử dụng.
+    \item \textbf{Chống tính sẵn:} Salt riêng cho từng trường hợp làm giảm hiệu quả của bảng băm tính sẵn và ngăn việc nhận ra ngay hai mật khẩu giống nhau chỉ bằng cách so sánh đầu ra. Salt có thể lưu công khai cùng các tham số dẫn xuất.
+    \item \textbf{Kênh kề và mật khẩu yếu:} Cách truy cập hỗn hợp của Argon2id cân bằng hai mục tiêu an toàn, nhưng không loại bỏ mọi kênh kề. Nếu mật khẩu có độ đoán được cao, kẻ tấn công vẫn có thể tìm ra bằng thử đoán; Argon2id chỉ làm mỗi lần thử tốn kém hơn.
+    \item \textbf{Phạm vi chức năng:} Argon2id không mã hóa dữ liệu và không tạo tính xác thực cho bản mã. Khi cần bảo vệ một khóa hoặc tệp, phải dùng đầu ra dẫn xuất với một lược đồ mã hóa thích hợp và xử lý khóa dẫn xuất an toàn trong bộ nhớ. Nếu thiết bị bị chiếm quyền trong lúc khóa đang được dùng, riêng Argon2id không thể ngăn lộ khóa.
+\end{itemize}

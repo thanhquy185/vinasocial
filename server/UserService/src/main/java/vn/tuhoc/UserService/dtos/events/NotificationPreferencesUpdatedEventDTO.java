@@ -1,0 +1,26 @@
+package vn.tuhoc.UserService.dtos.events;
+
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.FieldDefaults;
+
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@Getter
+@Setter
+@FieldDefaults(level = AccessLevel.PRIVATE)
+public class NotificationPreferencesUpdatedEventDTO {
+    Integer userId;
+    Boolean postEnabled;
+    Boolean storyEnabled;
+    Boolean collaboratorEnabled;
+    Boolean tagEnabled;
+    Boolean messageEnabled;
+    Boolean followEnabled;
+    Boolean replyCommentEnabled;
+}

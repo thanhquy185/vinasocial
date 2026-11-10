@@ -1,0 +1,62 @@
+\chapter{Thiết kế và hiện thực hệ thống}
+\section{Sơ đồ chức năng dưới dạng phân rã}
+Các nhóm chức năng của VinaSocial gồm tài khoản, nội dung, quan hệ, hội thoại, tương tác, thông báo và quản trị. Hình~\ref{fig:chuc-nang} cho thấy phạm vi của từng nhóm tác nhân; bảng tiếp theo mô tả chức năng cụ thể hơn.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  >=Latex, font=\small,
+  role/.style={draw,rounded corners,fill=blue!10,minimum width=3.5cm,minimum height=0.75cm,align=center},
+  task/.style={draw,rounded corners,fill=gray!7,minimum width=3.5cm,minimum height=0.75cm,align=center},
+  link/.style={-Latex,thick}
+]
+\node[role] (guest) at (-4.2,0) {Khách};
+\node[role] (member) at (0,0) {Thành viên};
+\node[role] (admin) at (4.2,0) {Quản trị viên};
+\node[task] (auth) at (-4.2,-1.5) {Đăng ký, đăng nhập, OTP};
+\node[task] (profile) at (0,-1.5) {Hồ sơ và riêng tư};
+\node[task] (moderate) at (4.2,-1.5) {Quản lý, kiểm duyệt};
+\node[task] (content) at (-2.1,-3) {Bài viết, story, media};
+\node[task] (social) at (2.1,-3) {Theo dõi, tương tác};
+\node[task] (chat) at (-2.1,-4.5) {Hội thoại E2EE};
+\node[task] (notify) at (2.1,-4.5) {Thông báo};
+\draw[link] (guest)--(auth);
+\draw[link] (member)--(profile);
+\draw[link] (admin)--(moderate);
+\draw[link] (member)--(content);
+\draw[link] (member)--(social);
+\draw[link] (member)--(chat);
+\draw[link] (member)--(notify);
+\end{tikzpicture}
+\caption{Phân rã chức năng theo tác nhân của VinaSocial}
+\label{fig:chuc-nang}
+\end{figure}
+\section{Danh sách use case}
+Hệ thống có ba nhóm tác nhân: khách chưa đăng nhập, thành viên và quản trị viên. Khách sử dụng các luồng xác thực tài khoản. Thành viên tạo nội dung và tham gia mạng quan hệ. Quản trị viên xử lý người dùng, nội dung và báo cáo vi phạm \cite{usecases}.
+
+\begin{longtable}{p{0.21\textwidth}p{0.70\textwidth}}
+\caption{Các nhóm nghiệp vụ của \project{}}\\
+\toprule
+Nhóm & Chức năng tiêu biểu \\
+\midrule
+\endfirsthead
+\toprule Nhóm & Chức năng tiêu biểu \\ \midrule
+\endhead
+Tài khoản & Đăng ký, đăng nhập, OTP, khôi phục mật khẩu, xác thực hai lớp, hồ sơ và cài đặt riêng tư. \\
+Nội dung & Tạo và đọc bài viết, story, feed, cấu hình đối tượng xem và kiểm duyệt nội dung. \\
+Quan hệ & Theo dõi, yêu cầu theo dõi, chặn người dùng và danh sách bạn thân. \\
+Hội thoại & Tin nhắn trực tiếp, tin nhắn nhóm, yêu cầu nhắn tin, trạng thái đã đọc và quản lý thành viên. \\
+Tương tác & Thích, bình luận, lưu, chia sẻ, đăng lại và báo cáo. \\
+Thông báo & Hộp thông báo trong ứng dụng, gửi email và SMS theo sự kiện. \\
+Quản trị & Quản lý người dùng, trạng thái bài viết/story và xử lý báo cáo. \\
+\bottomrule
+\end{longtable}
+
+\section{Một số quy tắc nghiệp vụ}
+Quan hệ theo dõi là quan hệ có hướng. Với tài khoản công khai, thao tác theo dõi có thể tạo quan hệ ngay; với tài khoản riêng tư, hệ thống tạo yêu cầu chờ chấp nhận. ``Bạn bè'' được suy ra từ hai quan hệ theo dõi ngược chiều. Danh sách bạn thân do chủ tài khoản quản lý và được dùng làm một loại đối tượng xem story \cite{relationship}.
+
+Một tin nhắn trực tiếp đầu tiên có thể trở thành yêu cầu nhắn tin, tùy trạng thái quan hệ. Hội thoại nhóm có thành viên và vai trò; các thao tác sửa/xóa tin kiểm tra quyền tác giả và tư cách thành viên. Việc chặn ảnh hưởng đến quan hệ và trao đổi tin trực tiếp \cite{relationship}.
+
+\section{Luồng nghiệp vụ tiêu biểu}
+\subsection{Đăng bài và tương tác}
+Website tải media lên MediaService, sau đó gửi tham chiếu media cùng nội dung đến ContentService. ContentService kiểm tra media và quyền hiển thị. Lượt thích, bình luận, lưu và báo cáo được quản lý ở InteractionService, thay vì lưu trực tiếp như thuộc tính nguồn của bài viết \cite{catalog}.

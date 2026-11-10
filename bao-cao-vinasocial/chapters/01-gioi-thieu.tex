@@ -1,0 +1,14 @@
+\chapter{Giới thiệu chung}
+\section{Lý do chọn đề tài}
+Một mạng xã hội cần kết hợp nhiều nghiệp vụ: quản lý tài khoản, nội dung, quan hệ giữa người dùng, tương tác, thông báo và nhắn tin. Các nghiệp vụ này có yêu cầu dữ liệu và phân quyền khác nhau. Đồ án \project{} tổ chức backend theo từng miền nghiệp vụ và xây dựng website làm giao diện chung. Khi chế độ E2EE được bật, website mã hóa tin nhắn và tệp đính kèm tại trình duyệt trước khi gửi đến máy chủ; chế độ này mặc định bật nhưng có thể được người dùng tắt \cite{architecture,e2ee}.
+
+\section{Mục tiêu của đề tài}
+Mục tiêu của đồ án là xây dựng website mạng xã hội có luồng đăng ký, đăng nhập, hồ sơ, bài viết, story, theo dõi, hội thoại, tương tác, thông báo và màn hình quản trị. Báo cáo tập trung vào cấu trúc và nghiệp vụ đang thể hiện trong mã nguồn. Hai cơ chế bảo mật được phân tích riêng là xác thực hai lớp bằng OTP và nhắn tin mã hóa đầu cuối.
+
+Báo cáo mô tả trạng thái triển khai, không coi sự tồn tại của API là bằng chứng rằng mọi màn hình và tình huống lỗi đã hoàn chỉnh. Những giới hạn còn lại được nêu tại Chương~\ref{chap:danh-gia}.
+
+\section{Phạm vi}
+Đề tài bao gồm kiến trúc mạng xã hội và tập trung phân tích 2FA qua OTP cùng cơ chế mã hóa đầu cuối cho tin nhắn. Phần đánh giá phân biệt chức năng đã có API, chức năng đã nối giao diện và những luồng chưa được xác minh bằng phiên chạy thực tế.
+
+\section{Phương pháp khảo sát}
+Nội dung được đối chiếu từ mã nguồn website, controller và service backend, cấu hình hệ thống, migration cơ sở dữ liệu cùng tài liệu nghiệp vụ trong repository \cite{readme,architecture,usecases,twofa,e2ee}. Một số unit test bảo mật sẵn có được chạy và ghi kết quả ở Chương 6; báo cáo không đưa ra số liệu hiệu năng hoặc kết quả kiểm thử giao diện khi chưa có phiên chạy tương ứng.

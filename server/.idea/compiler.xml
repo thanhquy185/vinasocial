@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile name="Gradle Imported" enabled="true">
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.46/lombok-1.18.46.jar" />
+        </processorPath>
+        <module name="InteractionService.main" />
+        <module name="InteractionService.test" />
+      </profile>
+    </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="ApiGateway" target="21" />
+      <module name="ApiGateway.main" target="21" />
+      <module name="ApiGateway.test" target="21" />
+      <module name="ConfigServer" target="21" />
+      <module name="ConfigServer.main" target="21" />
+      <module name="ConfigServer.test" target="21" />
+    </bytecodeTargetLevel>
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="ApiGateway" options="-parameters" />
+      <module name="ApiGateway.main" options="-parameters" />
+      <module name="ApiGateway.test" options="-parameters" />
+      <module name="ConfigServer" options="-parameters" />
+      <module name="ConfigServer.main" options="-parameters" />
+      <module name="ConfigServer.test" options="-parameters" />
+      <module name="ConfigService" options="-parameters" />
+      <module name="ConfigService.main" options="-parameters" />
+      <module name="ConfigService.test" options="-parameters" />
+      <module name="ContentService" options="-parameters" />
+      <module name="ContentService.main" options="-parameters" />
+      <module name="ContentService.test" options="-parameters" />
+      <module name="DiscoveryService" options="-parameters" />
+      <module name="DiscoveryService.main" options="-parameters" />
+      <module name="DiscoveryService.test" options="-parameters" />
+      <module name="GatewayService" options="-parameters" />
+      <module name="GatewayService.main" options="-parameters" />
+      <module name="GatewayService.test" options="-parameters" />
+      <module name="InteractionService" options="-parameters" />
+      <module name="InteractionService.main" options="-parameters" />
+      <module name="InteractionService.test" options="-parameters" />
+      <module name="MediaService" options="-parameters" />
+      <module name="MediaService.main" options="-parameters" />
+      <module name="MediaService.test" options="-parameters" />
+      <module name="NotificationService" options="-parameters" />
+      <module name="NotificationService.main" options="-parameters" />
+      <module name="NotificationService.test" options="-parameters" />
+      <module name="RelationshipService" options="-parameters" />
+      <module name="RelationshipService.main" options="-parameters" />
+      <module name="RelationshipService.test" options="-parameters" />
+      <module name="UserService" options="-parameters" />
+      <module name="UserService.main" options="-parameters" />
+      <module name="UserService.test" options="-parameters" />
+    </option>
+  </component>
+</project>

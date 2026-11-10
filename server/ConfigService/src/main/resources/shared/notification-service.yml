@@ -1,0 +1,33 @@
+server:
+  port: 8086
+
+spring:
+  mongodb:
+    uri: ${SPRING_DATA_MONGODB_URI:mongodb://${MONGODB_HOST:localhost}:27017/${MONGODB_DATABASE:vinasocial_notification}}
+    auto-index-creation: true
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            
+  kafka:
+    consumer:
+      group-id: notification-service
+
+twilio:
+  account-sid: ${TWILIO_ACCOUNT_SID}
+  auth-token: ${TWILIO_AUTH_TOKEN}
+  phone-from: ${TWILIO_PHONE_FROM}
+
+mongock:
+  migration-scan-package:
+    - vn.tuhoc.NotificationService.migrations
+

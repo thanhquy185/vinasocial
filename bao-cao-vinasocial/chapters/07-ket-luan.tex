@@ -1,0 +1,12 @@
+\chapter{Kết luận và hướng phát triển}\label{chap:danh-gia}
+\section{Kết quả thể hiện trong mã nguồn}
+Repository đã tách website và các service backend theo nghiệp vụ; có route cho xác thực, hồ sơ, nội dung, quan hệ, hội thoại, tương tác, thông báo và quản trị. UserService triển khai 2FA qua OTP, mã hóa OTP bằng AES-GCM khi lưu. Website có luồng mã hóa payload và tệp đính kèm phía client. RelationshipService quản lý public key theo thiết bị và lưu envelope ciphertext; private key được bảo vệ cục bộ trên thiết bị mới \cite{readme,architecture,e2ee}.
+
+\section{Giới hạn hiện tại}
+Tài liệu dự án ghi nhận một số chức năng có API nhưng giao diện chưa bao phủ đầy đủ mọi trạng thái; ví dụ yêu cầu nhắn tin, vai trò nhóm và một số danh sách tương tác. Trang tìm kiếm và thống kê cần đối chiếu thêm nguồn dữ liệu backend trước khi kết luận đã hoàn thiện. Cơ chế E2EE còn các giới hạn bảo mật và kịch bản chưa kiểm thử tích hợp nêu ở Chương 5 và Chương 6. Báo cáo này chưa có kết quả đo tải, kiểm thử xâm nhập hoặc đánh giá người dùng \cite{usecases,architecture}.
+
+\section{Hướng phát triển}
+Các bước tiếp theo là hoàn thiện giao diện cho các luồng API hiện có, kiểm tra tích hợp giữa service, bổ sung kiểm thử theo kịch bản nghiệp vụ và đo hiệu năng với dữ liệu thực tế. Với nhắn tin, cần đánh giá giao thức đã được thẩm định, xác minh khóa giữa người dùng, phục hồi thiết bị và kiểm tra đầy đủ thiết bị nhận trước khi cân nhắc triển khai ở môi trường có yêu cầu bảo mật cao.
+
+\section{Kết luận}
+\project{} thể hiện một ứng dụng mạng xã hội đa miền với frontend Next.js và backend Spring Boot chia service. Giá trị của thiết kế nằm ở việc phân định rõ chủ sở hữu dữ liệu và nối các luồng người dùng xuyên service. Phần mã hóa đầu cuối là một nguyên mẫu có chức năng thực tế, đồng thời có ranh giới an toàn cần tiếp tục nghiên cứu và kiểm chứng.

@@ -1,0 +1,34 @@
+\chapter{Xác thực hai lớp bằng OTP}\label{chap:twofa}
+\section{Cơ chế xác thực hai lớp qua OTP}
+\subsection{Thành phần và điều kiện sử dụng}
+Website cung cấp màn hình nhập OTP sau đăng nhập và mục bật/tắt 2FA trong cài đặt bảo mật. UserService quản lý trạng thái \texttt{two\_factor\_enabled}, tạo và xác minh challenge, rồi cấp token. NotificationService nhận sự kiện \texttt{auth\_otp\_security} từ Kafka để gửi OTP đến email hoặc số điện thoại đã xác minh và còn hoạt động. Người dùng không chọn kênh nhận trong giao diện hiện tại \cite{twofa}.
+
+\subsection{Luồng đăng nhập khi bật 2FA}
+\begin{enumerate}
+\item Người dùng nhập tên đăng nhập và mật khẩu. UserService xác thực mật khẩu trước.
+\item Nếu tài khoản bật 2FA, UserService tạo challenge có purpose \texttt{LOGIN}, lưu OTP đã mã hóa cùng thời hạn và phát sự kiện gửi mã. Phản hồi đầu chỉ có trạng thái cần 2FA, \texttt{otpPublicId}, hạn dùng và nơi nhận đã che; chưa cấp token.
+\item Người dùng nhập OTP trên website. Request xác minh gồm \texttt{publicId} và mã sáu chữ số.
+\item UserService kiểm tra purpose, hạn dùng, số lần sai, trạng thái đã dùng và mã OTP. Khi hợp lệ, service mới tạo phản hồi đăng nhập với token và phiên.
+\end{enumerate}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[>=Latex,font=\small,box/.style={draw,rounded corners,align=center,minimum width=8.8cm,minimum height=0.8cm},node distance=0.55cm]
+\node[box,fill=blue!10] (pw) {Website gửi tên đăng nhập và mật khẩu};
+\node[box,fill=blue!10,below=of pw] (auth) {UserService kiểm tra mật khẩu và trạng thái 2FA};
+\node[box,fill=orange!12,below=of auth] (otp) {Tạo OTP, mã hóa AES-GCM và lưu challenge ở MySQL};
+\node[box,fill=orange!12,below=of otp] (send) {Kafka chuyển mã đến NotificationService để gửi email/SMS};
+\node[box,fill=green!10,below=of send] (verify) {Người dùng nhập OTP; UserService xác minh rồi cấp token};
+\draw[->,thick] (pw)--(auth);
+\draw[->,thick] (auth)--(otp);
+\draw[->,thick] (otp)--(send);
+\draw[->,thick] (send)--(verify);
+\end{tikzpicture}
+\caption{Luồng đăng nhập 2FA bằng OTP của VinaSocial}\label{fig:luong-2fa}
+\end{figure}
+
+\subsection{Bật và tắt 2FA}
+Để bật hoặc tắt 2FA, người dùng phải đăng nhập và nhập lại mật khẩu hiện tại. UserService tạo challenge với purpose \texttt{ENABLE\_MFA} hoặc \texttt{DISABLE\_MFA}; mã OTP được gửi qua kênh liên lạc đã xác minh. Sau khi xác minh đúng purpose và user ID, service mới đổi trạng thái 2FA. Khi bật 2FA, các phiên đăng nhập hiện tại bị thu hồi để lần đăng nhập sau đi qua bước OTP. Tắt 2FA cũng yêu cầu mật khẩu và OTP \cite{twofa}.
+
+\subsection{Phân biệt với mật khẩu mở kho E2EE}
+OTP 2FA bảo vệ việc cấp phiên đăng nhập. Mật khẩu mở kho E2EE dẫn xuất khóa Argon2id để mở private key lưu trên browser profile. Hai cơ chế dùng bí mật và phạm vi bảo vệ khác nhau: đăng nhập thành công không tự mở kho khóa E2EE, và việc có private key cục bộ không thay thế bước OTP khi tài khoản bật 2FA.

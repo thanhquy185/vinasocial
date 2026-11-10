@@ -1,0 +1,61 @@
+\section{Áp dụng các thuật toán trong E2EE}
+\subsection{Cơ chế AES-GCM trong VinaSocial}
+\subsubsection{Mã hóa payload tin nhắn}
+Khi chế độ mã hóa được bật, VinaSocial thực hiện mã hóa tại website, trong hàm tiện ích E2EE phía client. Sau khi người dùng soạn tin, ứng dụng đóng gói nội dung thành payload JSON, tạo khóa AES 256-bit mới và IV 12 byte bằng Web Crypto API. Mã định danh tin nhắn do client tạo được dùng làm dữ liệu xác thực bổ sung (AAD). Kết quả gồm ciphertext và tag xác thực 128-bit. Mỗi lần chỉnh sửa tin nhắn E2EE tạo ciphertext và khóa AES mới nhưng tiếp tục dùng mã định danh tin nhắn ổn định làm AAD \cite{e2ee}.
+
+\begin{enumerate}
+\item Tạo \texttt{clientMessageId} trước khi mã hóa để liên kết dữ liệu và AAD.
+\item Tạo khóa AES cho riêng tin nhắn, sinh IV ngẫu nhiên.
+\item Mã hóa payload JSON bằng AES-GCM; Web Crypto trả ciphertext kèm tag.
+\item Xuất khóa AES tạm trong bộ nhớ để bọc bằng RSA-OAEP cho từng thiết bị.
+\item Gửi envelope ciphertext đến RelationshipService qua Gateway.
+\end{enumerate}
+
+\subsubsection{Mã hóa tệp đính kèm}
+Tệp không được gửi dưới dạng bản rõ theo luồng E2EE. Client tạo khóa AES và IV riêng, mã hóa bytes của tệp trước khi tải lên MediaService. Metadata cần để mở tệp, gồm khóa, IV, MIME type và tên tệp gốc, được đặt trong payload tin nhắn đã mã hóa. MediaService lưu object như dữ liệu opaque và đánh dấu chế độ E2EE; nó không giữ khóa AES giải mã tệp \cite{e2ee}.
+
+\subsubsection{Giải mã và kiểm tra}
+Thiết bị nhận lấy khóa AES đã bọc cho đúng device ID, dùng private key RSA để mở khóa, rồi dùng AES-GCM giải mã. Nếu IV, AAD, ciphertext hoặc tag bị thay đổi, phép giải mã thất bại. Việc giải mã diễn ra phía trình duyệt; server không cần và không có private key của thiết bị trong luồng hiện tại.
+
+\subsection{Lý do dùng AES-GCM}
+AES-GCM cung cấp tính bí mật và xác thực trong cùng một phép xử lý. Điều này phù hợp với payload ngắn của tin nhắn và cả bytes của tệp đính kèm. Tuy nhiên, AES-GCM chỉ bảo vệ dữ liệu khi IV/khóa được sử dụng đúng và không giải quyết vấn đề xác thực danh tính public key của đối phương.
+
+\subsection{RSA-OAEP trong VinaSocial}
+\subsubsection{Tạo khóa theo thiết bị}
+Mỗi tài khoản trên một browser profile có cặp RSA-OAEP 3072-bit với SHA-256 và public exponent 65537. Public key được đăng ký tại RelationshipService theo device ID. Private key của thiết bị mới chỉ được export dạng PKCS\#8 một lần trong quá trình tạo kho khóa; sau khi bảo vệ cục bộ, nó được import lại với thuộc tính không thể xuất \cite{e2ee}.
+
+\subsubsection{Đóng gói khóa AES}
+Với một tin nhắn, client đọc public key của từng thiết bị đang hoạt động thuộc người nhận và các thiết bị của chính người gửi. Khóa AES của tin được bọc riêng cho từng public key. Envelope chứa một ánh xạ từ device ID đến bản bọc khóa. Thiết bị nhận dùng private key của mình để mở đúng bản bọc. Bản bọc RSA không phải plaintext của tin; nó là khóa AES đã mã hóa.
+
+\subsubsection{Kiểm tra envelope ở server}
+RelationshipService kiểm tra version, tên thuật toán, định dạng Base64, IV 12 byte, ciphertext đủ dài cho tag, device ID dạng UUID và kích thước ciphertext RSA. Việc kiểm tra cấu trúc không chứng minh rằng client đã bọc khóa cho mọi thiết bị cần nhận và không xác minh được plaintext \cite{e2ee}.
+
+\subsection{Giới hạn của RSA-OAEP trong thiết kế}
+RSA-OAEP cho phép phân phối khóa AES nhưng không tạo forward secrecy. Nếu private key của một thiết bị lộ, các khóa AES cũ đã bọc cho thiết bị đó có thể bị mở. Cơ chế ghi nhớ public key đã thấy trong trình duyệt giúp phát hiện một số thay đổi khóa theo device ID, nhưng chưa có bước xác minh fingerprint trực tiếp giữa người dùng \cite{relationship}.
+
+\subsection{Argon2id và kho khóa thiết bị}
+\subsubsection{Mục đích}
+VinaSocial dùng mật khẩu mở kho riêng cùng Argon2id; private key đã mã hóa được lưu tại IndexedDB của browser profile, không tải lên server. Argon2id là hàm dẫn xuất khóa; AES-GCM mới là thuật toán trực tiếp mã hóa PKCS\#8 \cite{e2ee}.
+
+\subsubsection{Tham số và dữ liệu lưu trữ}
+Mật khẩu mở kho kết hợp salt ngẫu nhiên 16 byte. Argon2id được cấu hình với bộ nhớ 19 MiB, hai vòng, một luồng và đầu ra 32 byte. Khóa dẫn xuất được dùng tạm như khóa AES-256-GCM; IV dài 12 byte. AAD gắn ngữ cảnh với user ID, device ID và public JWK. IndexedDB lưu ciphertext của private key, salt, IV, tham số KDF, public JWK và metadata; không lưu mật khẩu hay khóa dẫn xuất \cite{e2ee}.
+
+\subsubsection{Quy trình tạo và mở kho}
+\begin{enumerate}
+\item Client tạo RSA keypair và xuất private key PKCS\#8 tạm trong bộ nhớ.
+\item Từ mật khẩu mở kho, salt và tham số Argon2id, client tạo khóa dẫn xuất.
+\item AES-GCM mã hóa PKCS\#8 với IV và AAD; bản rõ chỉ tồn tại tạm trong bộ nhớ.
+\item Khi mở kho, client tính lại khóa, xác thực bản mã và import private key dưới dạng không thể xuất.
+\item Khóa runtime chỉ ở bộ nhớ tab; đăng xuất, đổi tài khoản hoặc tải lại tab cần mở kho lại.
+\end{enumerate}
+
+\subsection{Khóa legacy và chuyển thiết bị}
+Bản ghi khóa legacy dạng \texttt{CryptoKey} vẫn được đọc để giữ khả năng giải mã lịch sử. Vì khóa cũ không thể xuất, ứng dụng không tự chuyển nó thành dạng kho khóa mới. Để giữ lịch sử, người dùng tạo khóa mới trên browser profile khác, ghép nối thiết bị, chuyển các bản bọc khóa AES cũ rồi mới thu hồi thiết bị legacy. Việc kích hoạt thiết bị mới không tự chuyển lịch sử \cite{e2ee}.
+
+\subsection{Vai trò phối hợp của các thuật toán}
+\begin{itemize}
+\item \textbf{AES-256-GCM}: mã hóa và xác thực payload tin nhắn, tệp đính kèm và private key khi lưu.
+\item \textbf{RSA-OAEP-3072/SHA-256}: bọc khóa AES của từng tin cho từng thiết bị.
+\item \textbf{Argon2id}: dẫn xuất khóa từ mật khẩu mở kho để bảo vệ private key cục bộ.
+\end{itemize}
+Ba thuật toán giải quyết ba vấn đề khác nhau. Việc kết hợp này không tự tạo một giao thức nhắn tin đã được đánh giá độc lập; các giới hạn của nguyên mẫu được nêu ở Chương 5.

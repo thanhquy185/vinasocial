@@ -1,0 +1,15 @@
+\section{Ứng dụng AES-GCM để bảo vệ OTP 2FA}
+\subsection{Vì sao cần mã hóa OTP khi lưu}
+OTP đăng nhập của VinaSocial là mã sáu chữ số do UserService tạo bằng \texttt{SecureRandom} rồi gửi qua email hoặc SMS. Đây là OTP do server phát hành cho từng challenge, không phải TOTP được hai phía tự tính từ một bí mật dùng chung. Server cần đối chiếu mã người dùng nhập trong thời gian challenge còn hiệu lực. Vì vậy mã được lưu tạm trong bảng \texttt{auth\_otps}, nhưng được mã hóa trước khi ghi xuống MySQL \cite{twofa}.
+
+\subsection{Định dạng bản mã}
+\texttt{AuthOtpEncryptionServiceImplement} dùng khóa AES dài 32 byte, IV ngẫu nhiên 12 byte và tag xác thực 128 bit. \texttt{publicId} của challenge được đưa vào AAD để ràng buộc bản mã với bản ghi tương ứng. Giá trị lưu ở cột \texttt{code} có dạng \texttt{v1.<IV-base64url>.<ciphertext-base64url>}. Khóa AES được cấp từ cấu hình và phải giữ ổn định qua các lần khởi động để những challenge còn hiệu lực vẫn giải mã được \cite{twofa}.
+
+\begin{equation}
+  (C,T)=\operatorname{AES\mbox{-}GCM.Enc}(K,N,\mathrm{OTP},\mathrm{publicId}).
+\end{equation}
+
+Khi xác minh, UserService giải mã giá trị đã lưu với cùng khóa và \texttt{publicId}, rồi so sánh với mã người dùng nhập. Việc mã hóa bảo vệ OTP trong bản sao cơ sở dữ liệu; nó không làm OTP thành mã đầu cuối vì UserService phải biết mã gốc để gửi và kiểm tra. Sự kiện gửi sang NotificationService qua Kafka vẫn mang mã OTP dạng rõ trong payload để dịch vụ này chuyển đến người dùng \cite{twofa}.
+
+\subsection{Vòng đời của mã}
+Challenge hết hạn sau 90 giây và chỉ được xác minh một lần. UserService ghi thời điểm xác minh, đếm số lần nhập sai và từ chối sau tối đa năm lần sai. Bản ghi có thể vẫn tồn tại sau khi đã dùng, nhưng \texttt{verifiedAt} ngăn sử dụng lại; báo cáo không gọi cơ chế này là ``không lưu OTP''. Các bản ghi OTP cũ dạng plaintext vẫn được lớp giải mã đọc để tương thích trong giai đoạn chuyển đổi; OTP mới được ghi ở dạng mã hóa \cite{twofa}.

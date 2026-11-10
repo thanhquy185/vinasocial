@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+     th:fragment="layout(pageTitle, content)">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${pageTitle} + ' - VinaSocial'">VinaSocial</title>
+    <style>
+        body, p, h1, h2, h3 {
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            width: 100%;
+            background-color: #F4F5F7;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            color: #333333;
+        }
+
+        .email-wrapper {
+            width: 100%;
+            background-color: #F4F5F7;
+        }
+
+        .email-card {
+            width: 100%;
+            max-width: 520px;
+            background-color: #FFFFFF;
+            border: 1px solid #EAEAEA;
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .brand {
+            padding: 32px 24px 0;
+            color: #E1306C;
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: -0.3px;
+            text-align: center;
+        }
+
+        .email-title {
+            padding: 18px 28px 0;
+            color: #111827;
+            font-size: 22px;
+            font-weight: 700;
+            line-height: 1.35;
+            text-align: center;
+        }
+
+        .email-content {
+            padding: 24px 36px 36px;
+        }
+
+        .text {
+            margin: 0 0 20px;
+            color: #4B5563;
+            font-size: 15px;
+            line-height: 1.65;
+        }
+
+        .recipient-name {
+            color: #111827;
+        }
+
+        .otp-box {
+            margin: 26px 0;
+            border: 1px solid rgba(220, 39, 67, 0.2);
+            border-radius: 12px;
+            background-color: #FFF8FA;
+            background-image: linear-gradient(135deg, rgba(240, 148, 51, 0.05) 0%, rgba(220, 39, 67, 0.05) 50%, rgba(188, 24, 136, 0.05) 100%);
+            text-align: center;
+        }
+
+        .otp-label {
+            padding: 22px 16px 8px;
+            color: #E1306C;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+        }
+
+        .otp-code {
+            padding: 0 16px;
+            color: #1E1B4B;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 36px;
+            font-weight: 800;
+            letter-spacing: 10px;
+        }
+
+        .otp-expire {
+            padding: 10px 16px 22px;
+            color: #6B7280;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .otp-expire strong {
+            color: #EF4444;
+        }
+
+        .security-note {
+            margin-top: 24px;
+            padding: 14px 16px;
+            border-radius: 8px;
+            background-color: #F9FAFB;
+            color: #6B7280;
+            font-size: 13px;
+            line-height: 1.55;
+        }
+
+        .security-note strong {
+            color: #374151;
+        }
+
+        .email-footer {
+            padding: 22px 20px 0;
+            color: #9CA3AF;
+            font-size: 12px;
+            line-height: 1.6;
+            text-align: center;
+        }
+
+        .email-footer p + p {
+            margin-top: 4px;
+        }
+
+        @media only screen and (max-width: 560px) {
+            .email-outer-cell {
+                padding: 24px 12px !important;
+            }
+
+            .email-content {
+                padding: 22px 24px 30px !important;
+            }
+
+            .email-title {
+                font-size: 20px !important;
+            }
+
+            .otp-code {
+                font-size: 32px !important;
+                letter-spacing: 8px !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <table role="presentation" class="email-wrapper" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#F4F5F7">
+        <tr>
+            <td class="email-outer-cell" align="center" style="padding: 40px 16px;">
+                <table role="presentation" class="email-card" width="520" cellspacing="0" cellpadding="0" border="0" bgcolor="#FFFFFF" style="width: 100%; max-width: 520px; border: 1px solid #EAEAEA; border-radius: 16px;">
+                    <tr>
+                        <td height="5" bgcolor="#E1306C" style="height: 5px; line-height: 5px; font-size: 0;">&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td class="brand" style="padding: 32px 24px 0; color: #E1306C; font-size: 18px; font-weight: 800; text-align: center;">VinaSocial</td>
+                    </tr>
+                    <tr>
+                        <td class="email-title" style="padding: 18px 28px 0; color: #111827; font-size: 22px; font-weight: 700; line-height: 1.35; text-align: center;" th:text="${pageTitle}">Thông báo từ VinaSocial</td>
+                    </tr>
+                    <tr>
+                        <td class="email-content" style="padding: 24px 36px 36px;">
+                            <th:block th:replace="${content}"></th:block>
+                        </td>
+                    </tr>
+                </table>
+                <table role="presentation" width="520" cellspacing="0" cellpadding="0" border="0" style="width: 100%; max-width: 520px;">
+                    <tr>
+                        <td class="email-footer" style="padding: 22px 20px 0; color: #9CA3AF; font-size: 12px; line-height: 1.6; text-align: center;">
+                            <p>© VinaSocial. All rights reserved.</p>
+                            <p style="margin-top: 4px;">Email này được gửi tự động, vui lòng không phản hồi.</p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

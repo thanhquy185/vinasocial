@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/ContentService.main.iml" filepath="$PROJECT_DIR$/.idea/modules/ContentService.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/GatewayService.main.iml" filepath="$PROJECT_DIR$/.idea/modules/GatewayService.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/InteractionService.main.iml" filepath="$PROJECT_DIR$/.idea/modules/InteractionService.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/MediaService.main.iml" filepath="$PROJECT_DIR$/.idea/modules/MediaService.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/NotificationService.main.iml" filepath="$PROJECT_DIR$/.idea/modules/NotificationService.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/RelationshipService.main.iml" filepath="$PROJECT_DIR$/.idea/modules/RelationshipService.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/UserService.main.iml" filepath="$PROJECT_DIR$/.idea/modules/UserService.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/UserService.test.iml" filepath="$PROJECT_DIR$/.idea/modules/UserService.test.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/server.iml" filepath="$PROJECT_DIR$/.idea/server.iml" />
+    </modules>
+  </component>
+</project>

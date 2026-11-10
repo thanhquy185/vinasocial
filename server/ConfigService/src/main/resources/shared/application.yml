@@ -1,0 +1,96 @@
+spring:
+  servlet:
+    multipart:
+      enabled: true
+      # default = 1MB
+      max-file-size: 50MB
+      # default = 10 MB (form data)
+      max-request-size: 50MB
+
+  main:
+    allow-bean-definition-overriding: true
+    allow-circular-references: true
+
+  kafka:
+    bootstrap-servers:
+      - "localhost:9092"
+    producer:
+      key-serializer: "org.apache.kafka.common.serialization.StringSerializer"
+      value-serializer: "org.springframework.kafka.support.serializer.JacksonJsonSerializer"
+      # Explain Ack Value
+      #0: no wait for kafka response
+      #1: leader write success, not wait for follower
+      #-1: wait for all leader and replication
+      acks: -1
+      retries: 1
+      properties:
+        "[enable.idempotence]": true
+        "[spring.json.add.type.headers]": false
+        "[request.timeout.ms]": 1000
+        "[max.in.flight.requests.per.connection]": 5
+    consumer:
+      key-deserializer: "org.apache.kafka.common.serialization.StringDeserializer"
+      value-deserializer: "org.springframework.kafka.support.serializer.JacksonJsonDeserializer"
+      auto-offset-reset: earliest
+      properties:
+        "[spring.json.trusted.packages]": "*"
+
+jwt:
+  base64-secret: ${JWT_BASE64_SECRET}
+  access-token-validity-in-seconds: 600
+  refresh-token-validity-in-seconds: 86400
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+feign:
+  client:
+    config:
+      default:
+        connect-timeout: 5000
+        read-timeout: 5000
+  circuitbreaker:
+    enabled: true
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
+  instance:
+    prefer-ip-address: true
+
+logging:
+  level:
+    root: INFO
+
+  # file:
+  #   name: vinasocial.log
+
+  logback:
+    rollingpolicy:
+      max-file-size: 2MB
+
+  pattern:
+    correlation: "[${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
+
+  include-application-name: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+
+  endpoint:
+    health:
+      show-details: always
+
+  tracing:
+    sampling:
+      probability: 1.0
+
+    export:
+      zipkin:
+        endpoint: http://localhost:9411/api/v2/spans

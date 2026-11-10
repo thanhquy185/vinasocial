@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: user-service
+  config:
+    import: configserver:http://localhost:8888
+
+auth:
+  otp:
+    encryption-key-base64: "nUoKBuAwT60IGTsxyOrWJHCLqamiwGapwPk6Jh4SeG0="

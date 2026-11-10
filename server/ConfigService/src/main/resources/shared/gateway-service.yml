@@ -1,0 +1,30 @@
+server:
+  port: 8080
+
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8080/realms/vinasocial-app
+
+springdoc:
+  swagger-ui:
+    urls:
+      - name: User Service
+        url: /v3/api-docs/user-service
+
+      - name: Relationship Service
+        url: /v3/api-docs/relationship-service
+      
+      - name: Content Service
+        url: /v3/api-docs/content-service
+      
+      - name: Interaction Service
+        url: /v3/api-docs/interaction-service
+
+      - name: Media Service
+        url: /v3/api-docs/media-service
+
+      - name: Notification Service
+        url: /v3/api-docs/notification-service

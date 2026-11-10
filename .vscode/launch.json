@@ -1,0 +1,64 @@
+{
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Spring Boot-ConfigServiceApplication<ConfigService>",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "mainClass": "vn.tuhoc.ConfigService.ConfigServiceApplication",
+      "projectName": "ConfigService",
+      "args": "",
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "type": "java",
+      "name": "Spring Boot-DiscoveryServiceApplication<DiscoveryService>",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "mainClass": "vn.tuhoc.DiscoveryService.DiscoveryServiceApplication",
+      "projectName": "DiscoveryService",
+      "args": "",
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "type": "java",
+      "name": "Spring Boot-GatewayServiceApplication<GatewayService>",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "mainClass": "vn.tuhoc.GatewayService.GatewayServiceApplication",
+      "projectName": "GatewayService",
+      "args": "",
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "type": "java",
+      "name": "Spring Boot-UserServiceApplication<UserService>",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "mainClass": "vn.tuhoc.UserService.UserServiceApplication",
+      "projectName": "UserService",
+      "args": "",
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "type": "java",
+      "name": "Spring Boot-MediaServiceApplication<MediaService>",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "mainClass": "vn.tuhoc.MediaService.MediaServiceApplication",
+      "projectName": "MediaService",
+      "args": "",
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "type": "java",
+      "name": "Spring Boot-ContentServiceApplication<ContentService>",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "mainClass": "vn.tuhoc.ContentService.ContentServiceApplication",
+      "projectName": "ContentService",
+      "args": "",
+      "envFile": "${workspaceFolder}/.env"
+    }
+  ]
+}

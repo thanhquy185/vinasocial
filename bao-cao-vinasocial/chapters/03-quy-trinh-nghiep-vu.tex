@@ -1,0 +1,26 @@
+\section{Quy trình hoạt động của các nghiệp vụ chính}
+\subsection{Đăng ký và đăng nhập}
+Luồng xác thực bắt đầu ở nhóm trang đăng ký và đăng nhập của website. Request đi qua Gateway đến UserService để kiểm tra thông tin tài khoản và cấp phiên theo trạng thái bảo mật của người dùng. Website duy trì phiên thông qua token và cơ chế refresh. Quy trình OTP khi tài khoản bật 2FA được phân tích riêng ở Chương~\ref{chap:twofa} \cite{architecture,usecases}.
+
+\subsection{Xem hồ sơ và quyền riêng tư}
+Khi truy cập trang cá nhân, website gọi API hồ sơ theo username. UserService xác định người xem là chính chủ hay người khác để trả dữ liệu chi tiết hoặc dữ liệu công khai. Website truy vấn bài viết hồ sơ từ ContentService; service này phải xét trạng thái nội dung và đối tượng được phép xem. Các ID người dùng liên service là tham chiếu nghiệp vụ, không phải khóa ngoại trực tiếp giữa các cơ sở dữ liệu \cite{architecture,catalog}.
+
+\subsection{Theo dõi và yêu cầu theo dõi}
+Người dùng mở hồ sơ của tài khoản khác và chọn theo dõi. RelationshipService kiểm tra trạng thái chặn, quyền riêng tư và quan hệ hiện tại. Với tài khoản công khai, quan hệ theo dõi có hướng được tạo. Với tài khoản riêng tư, yêu cầu theo dõi được lưu ở trạng thái chờ. Chủ tài khoản có thể chấp nhận hoặc từ chối; việc chấp nhận mới tạo quan hệ theo dõi. Hủy theo dõi hoặc hủy yêu cầu là thao tác riêng. Danh sách bạn thân là tập đối tượng do chủ tài khoản quản lý, không được suy ra tự động từ quan hệ theo dõi hai chiều \cite{relationship}.
+
+\subsection{Đăng bài, story và media}
+Đối với nội dung có ảnh hoặc video, website tải media lên MediaService trước. Sau khi có media ID, client gửi request tạo bài hoặc story đến ContentService. Service xác minh media hợp lệ, đúng người sở hữu và mục đích sử dụng; sau đó lưu nội dung, trạng thái hiển thị và thiết lập liên quan. Khi đọc feed hoặc hồ sơ, kết quả được lọc theo trạng thái nội dung, moderation, thời hạn story và quyền xem. Reels hiện đi qua luồng post/media tương ứng trên website, không nên tự suy ra có một service reel độc lập \cite{catalog}.
+
+\subsection{Tương tác và báo cáo}
+InteractionService giữ dữ liệu thích, bình luận, xem, lưu, đăng lại, chia sẻ và báo cáo. Khi người dùng thích một bài viết, request đến InteractionService với target ID; bài viết gốc vẫn thuộc ContentService. Cách phân tách này cho phép mỗi service quản lý vòng đời dữ liệu của mình, nhưng các màn hình cần kết hợp dữ liệu từ nhiều nguồn để hiển thị đầy đủ nội dung và chỉ số tương tác \cite{catalog}.
+
+
+\section{Giao diện và dữ liệu minh họa}
+\subsection{Các màn hình của người dùng}
+Nhóm xác thực gồm đăng ký, đăng nhập, quên mật khẩu và xác minh OTP. Sau khi đăng nhập, người dùng có thể xem feed, bài viết, story, trang cá nhân, quan hệ theo dõi và khu vực tin nhắn. Giao diện tin nhắn có danh sách hội thoại, nội dung chat, nhóm, yêu cầu nhắn tin và cửa sổ chat nổi. Phần cài đặt bảo mật cho biết trạng thái khóa E2EE cục bộ, thiết bị và thao tác mở kho/ghép nối theo khả năng hiện có của website \cite{usecases,e2ee}.
+
+\subsection{Màn hình quản trị}
+Khu vực quản trị có màn hình người dùng, bài viết, story/reel và báo cáo. Các API quản trị ContentService phân biệt trạng thái hiển thị và trạng thái moderation; xử lý report thuộc InteractionService. Việc có trang thống kê trong website chưa đủ để kết luận mọi chỉ số đã có nguồn dữ liệu backend hoàn chỉnh \cite{catalog,usecases}.
+
+\subsection{Dữ liệu bản mã}
+Ở RelationshipService, tin nhắn mới theo luồng E2EE lưu envelope ciphertext và bản bọc khóa, không lưu plaintext của payload. Tin được gửi khi người dùng tắt E2EE là trường hợp khác và có thể được server đọc. Bảng khóa thiết bị giữ public key cùng trạng thái ghép nối; private key được mã hóa nằm ở IndexedDB phía browser profile. Với tệp thuộc luồng E2EE, MediaService giữ đối tượng đã mã hóa và metadata chế độ E2EE. Các khẳng định này dựa trên thiết kế và mã nguồn; báo cáo chưa có ảnh chụp cơ sở dữ liệu từ một phiên chạy thực tế \cite{e2ee}.

@@ -1,0 +1,8 @@
+server:
+  port: 8084
+
+spring:
+  data:
+    mongodb:
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://${MONGODB_HOST:localhost}:27017/${MONGODB_DATABASE:vinasocial_interaction}}
+      auto-index-creation: true

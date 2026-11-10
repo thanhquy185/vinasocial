@@ -1,0 +1,23 @@
+\section{Quy trình một tin nhắn E2EE}
+\subsection{Giai đoạn 1: Chuẩn bị trên thiết bị gửi}
+Người gửi đã đăng nhập, có hội thoại hợp lệ và đã mở kho E2EE trên tab khi cần dùng private key cục bộ. Website lấy public key của các thiết bị đang hoạt động thuộc các thành viên hội thoại. Trình duyệt đối chiếu khóa đã thấy theo device ID ở IndexedDB để phát hiện thay đổi bất thường trong phạm vi kiểm tra cục bộ hiện có. Việc lấy danh sách khóa từ server không tương đương xác minh danh tính khóa theo một kênh độc lập \cite{e2ee,relationship}.
+
+\subsection{Giai đoạn 2: Mã hóa và gửi}
+Website tạo mã định danh tin nhắn, payload JSON, khóa AES mới và IV ngẫu nhiên. Payload được mã hóa bằng AES-256-GCM với mã định danh tin nhắn làm AAD. Khóa AES sau đó được bọc bằng RSA-OAEP/SHA-256 cho từng public key thiết bị liên quan. Client gửi envelope gồm version, thuật toán, IV, ciphertext và ánh xạ khóa đã bọc qua API hội thoại. Với tệp đính kèm, bytes đã được mã hóa trước khi MediaService nhận object; thông tin mở tệp nằm bên trong payload message được bảo vệ \cite{e2ee}.
+
+\subsection{Giai đoạn 3: Kiểm tra và lưu trữ phía server}
+Gateway xác thực và định tuyến request đến RelationshipService. Service kiểm tra quyền tham gia hội thoại, điều kiện thao tác và cấu trúc envelope, sau đó lưu ciphertext ở bảng tin nhắn. Server có thể đọc metadata vận hành như người gửi, hội thoại, thời điểm và kích thước; nó không dùng private key để giải mã payload theo luồng hiện tại. Cần phân biệt việc server lưu ciphertext với một cam kết tuyệt đối về an toàn đầu cuối: tính an toàn còn phụ thuộc vào mã client, phân phối public key và bảo vệ thiết bị \cite{e2ee,relationship}.
+
+\subsection{Giai đoạn 4: Nhận và giải mã}
+Website của người nhận tải tin nhắn qua API, tìm entry khóa bọc tương ứng với device ID cục bộ, dùng private key đang mở để giải bọc khóa AES, rồi xác thực và giải mã payload. Nếu không có entry phù hợp, nếu kho khóa chưa mở hoặc nếu thẻ xác thực không đúng, client không hiển thị bản rõ của tin. Với tin từ trước thời điểm thiết bị được kích hoạt, người dùng có thể cần chuyển các wrapper lịch sử từ thiết bị cũ \cite{e2ee}.
+
+\section{Ghép nối, chuyển lịch sử và thu hồi thiết bị}
+\subsection{Ghép nối thiết bị mới}
+Thiết bị mới tạo cặp khóa và đăng ký public key ở trạng thái chờ. Một thiết bị đang hoạt động phê duyệt yêu cầu bằng quy trình ghép nối. Phiên đăng nhập của thiết bị mới không thể tự phê duyệt yêu cầu của chính nó. Khi được kích hoạt, public key mới có thể nhận bản bọc AES cho các tin gửi sau thời điểm đó \cite{e2ee}.
+
+\subsection{Chuyển lịch sử}
+Thiết bị nguồn tải lịch sử theo trang, tìm bản bọc AES mà private key của mình mở được, giải bọc AES key trong bộ nhớ rồi bọc lại cho public key thiết bị đích. Client không cần giải mã payload để chuyển khóa. Server lưu wrapper bổ sung theo message ID và device ID, gắn với SHA-256 của ciphertext hiện tại. Khi tin nhắn được sửa, ciphertext thay đổi khiến wrapper cũ không còn được trả cho client; cần tạo wrapper phù hợp với phiên bản mới \cite{e2ee}.
+
+\subsection{Thu hồi và mất thiết bị}
+Thu hồi khóa E2EE và thu hồi phiên đăng nhập là hai thao tác API riêng. Thu hồi ngăn khóa đó được dùng cho các lần bọc mới nhưng không xóa các ciphertext cũ mà thiết bị đã nhận, cũng không xóa private key trên chính thiết bị đã bị thu hồi. Nếu mất browser profile chứa private key và không còn thiết bị khác có khóa tương ứng hoặc wrapper lịch sử, người dùng có thể không mở được các tin cũ. Đây là giới hạn quan trọng khi đánh giá khả năng phục hồi dữ liệu \cite{e2ee}.
+

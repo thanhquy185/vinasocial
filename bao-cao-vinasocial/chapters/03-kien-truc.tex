@@ -1,0 +1,51 @@
+\section{Kiến trúc tổng thể}
+Website dùng Next.js App Router, React và TypeScript. Trình duyệt gọi API qua GatewayService. Gateway định tuyến và xác thực JWT; các service ứng dụng dùng ConfigService để nhận cấu hình và DiscoveryService để đăng ký, tìm nhau. Những thao tác cần dữ liệu đồng bộ dùng HTTP/OpenFeign; sự kiện bất đồng bộ dùng Kafka \cite{architecture}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  >=Latex,font=\small,
+  core/.style={draw,rounded corners,fill=blue!12,minimum width=4.2cm,minimum height=0.7cm,align=center},
+  svc/.style={draw,rounded corners,fill=green!9,minimum width=3.6cm,minimum height=0.7cm,align=center},
+  infra/.style={draw,rounded corners,fill=orange!12,minimum width=3.6cm,minimum height=0.7cm,align=center},
+  edge/.style={-Latex,thick}
+]
+\node[core] (web) at (0,0) {Website Next.js};
+\node[core] (gw) at (0,-1.2) {GatewayService};
+\node[svc] (user) at (-4,-2.7) {UserService\\MySQL};
+\node[svc] (rel) at (0,-2.7) {RelationshipService\\MySQL};
+\node[svc] (content) at (4,-2.7) {ContentService\\PostgreSQL};
+\node[svc] (inter) at (-4,-4.2) {InteractionService\\MongoDB};
+\node[svc] (media) at (0,-4.2) {MediaService\\MongoDB};
+\node[svc] (notif) at (4,-4.2) {NotificationService\\MongoDB};
+\node[infra] (config) at (-2,-5.7) {ConfigService};
+\node[infra] (discovery) at (2,-5.7) {DiscoveryService};
+\draw[edge] (web)--(gw);
+\foreach \n in {user,rel,content,inter,media,notif}{\draw[edge] (gw)--(\n);}
+\end{tikzpicture}
+\caption{Kiến trúc dịch vụ và kho dữ liệu chính của VinaSocial. ConfigService và DiscoveryService hỗ trợ cấu hình, đăng ký và tra cứu các service.}
+\label{fig:kien-truc}
+\end{figure}
+
+\begin{table}[ht]
+\centering
+\caption{Các service chính và trách nhiệm}
+\begin{tabular}{p{0.35\textwidth}p{0.55\textwidth}}
+\toprule
+Service & Trách nhiệm \\
+\midrule
+UserService & Tài khoản, phiên, OTP, hồ sơ và cài đặt. \\
+RelationshipService & Quan hệ xã hội, hội thoại, tin nhắn và khóa công khai thiết bị. \\
+ContentService & Bài viết, story, feed và kiểm duyệt. \\
+InteractionService & Tương tác và báo cáo. \\
+MediaService & Media metadata, tải lên và kiểm tra quyền sử dụng media. \\
+NotificationService & Thông báo, email và SMS. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Tổ chức dữ liệu}
+Mỗi service sở hữu dữ liệu riêng: UserService và RelationshipService dùng MySQL, ContentService dùng PostgreSQL, còn InteractionService, MediaService và NotificationService dùng MongoDB. ID người dùng được lưu làm tham chiếu ở các miền khác; hệ thống không tạo khóa ngoại xuyên cơ sở dữ liệu của các service \cite{architecture}. Cách tổ chức này giúp ranh giới ghi dữ liệu rõ ràng, đồng thời đòi hỏi xử lý cẩn thận khi một luồng cần thông tin từ nhiều service.
+
+\section{Tổ chức website}
+Mã nguồn website chia route theo nhóm xác thực, mạng xã hội và quản trị. Lớp API client nằm trong thư mục \texttt{services/apis/v1}; các component theo miền nghiệp vụ; Redux lưu một phần trạng thái phiên, còn TanStack Query xử lý truy vấn dữ liệu. Axios gọi Gateway bằng biến cấu hình URL và gửi thông tin xác thực theo quy ước của ứng dụng \cite{architecture}.

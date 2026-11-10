@@ -1,0 +1,48 @@
+\documentclass[12pt,a4paper]{report}
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\setdefaultlanguage{vietnamese}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath,booktabs,longtable,array,hyperref,setspace,graphicx}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc}
+\onehalfspacing
+% Bỏ khoảng trắng 50pt mặc định trước tiêu đề chương của lớp report.
+\makeatletter
+\def\@makechapterhead#1{%
+  \vspace*{0pt}%
+  {\parindent\z@\raggedright\normalfont
+    \ifnum\c@secnumdepth>\m@ne
+      \huge\bfseries\@chapapp\space\thechapter\par\nobreak\vskip 10\p@
+    \fi
+    \interlinepenalty\@M\Huge\bfseries #1\par\nobreak\vskip 22\p@
+  }}
+\def\@makeschapterhead#1{%
+  \vspace*{0pt}%
+  {\parindent\z@\raggedright\normalfont
+    \interlinepenalty\@M\Huge\bfseries #1\par\nobreak\vskip 22\p@
+  }}
+\makeatother
+\hypersetup{colorlinks=true,linkcolor=black,urlcolor=blue}
+\newcommand{\project}{VinaSocial}
+
+\begin{document}
+\input{frontmatter/title}
+\pagenumbering{roman}
+\tableofcontents
+\clearpage
+\pagenumbering{arabic}
+\input{chapters/01-gioi-thieu}
+\input{chapters/02-thuat-toan}
+\input{chapters/03-nghiep-vu}
+\input{chapters/03-kien-truc}
+\input{chapters/03-quy-trinh-nghiep-vu}
+\input{chapters/04-2fa}
+\input{chapters/04-otp-aes}
+\input{chapters/05-e2ee}
+\input{chapters/05-ap-dung-thuat-toan}
+\input{chapters/05-quy-trinh-e2ee}
+\input{chapters/06-an-toan-kiem-thu}
+\input{chapters/07-ket-luan}
+\input{references}
+\end{document}

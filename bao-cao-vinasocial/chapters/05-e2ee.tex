@@ -1,0 +1,49 @@
+\chapter{Nhắn tin mã hóa đầu cuối}\label{chap:e2ee}
+Hình~\ref{fig:luong-e2ee} tóm tắt ranh giới xử lý: trình duyệt tạo và mở khóa nội dung, còn RelationshipService lưu và trả envelope ciphertext.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[>=Latex,font=\small,thick]
+\node[draw,fill=blue!10,minimum width=3.3cm,align=center] (a) at (-4,0) {Trình duyệt gửi};
+\node[draw,fill=orange!10,minimum width=3.3cm,align=center] (s) at (0,0) {RelationshipService};
+\node[draw,fill=blue!10,minimum width=3.3cm,align=center] (b) at (4,0) {Trình duyệt nhận};
+\draw[dashed] (-4,-0.4)--(-4,-5.3);
+\draw[dashed] (0,-0.4)--(0,-5.3);
+\draw[dashed] (4,-0.4)--(4,-5.3);
+\draw[-Latex] (-4,-1)--node[above,fill=white]{Lấy public key thiết bị} (0,-1);
+\draw[-Latex] (0,-1.7)--node[above,fill=white]{Danh sách khóa công khai} (-4,-1.7);
+\node[fill=white,align=center] at (-4,-2.5) {AES-GCM mã hóa payload\\RSA-OAEP bọc khóa AES};
+\draw[-Latex] (-4,-3.3)--node[above,fill=white]{Envelope ciphertext} (0,-3.3);
+\node[fill=white,align=center] at (0,-4) {Lưu bản mã và\\khóa đã bọc};
+\draw[-Latex] (0,-4.7)--node[above,fill=white]{Trả envelope} (4,-4.7);
+\node[fill=white,align=center] at (4,-5.3) {RSA mở khóa AES; AES-GCM giải mã};
+\end{tikzpicture}
+\caption{Luồng gửi và nhận tin nhắn E2EE theo thiết bị}
+\label{fig:luong-e2ee}
+\end{figure}
+\section{Mô hình bảo vệ}
+Website có chế độ E2EE mặc định bật, nhưng người dùng có thể tắt qua thiết lập mã hóa hội thoại. Trong chế độ E2EE, website mã hóa payload tin nhắn trước khi gọi API. RelationshipService lưu ciphertext và các khóa AES đã được bọc cho từng thiết bị; service kiểm tra cấu trúc envelope và quyền truy cập nhưng không giải mã nội dung. Tệp đính kèm trong luồng E2EE cũng được mã hóa phía client trước khi tải lên MediaService \cite{e2ee,relationship}.
+
+\section{Thuật toán và quản lý khóa}
+Mỗi browser profile của một tài khoản có một cặp RSA-OAEP 3072 bit với SHA-256. Public key được đăng ký ở RelationshipService. Private key của thiết bị mới được xuất tạm một lần, sau đó bảo vệ trong IndexedDB bằng AES-256-GCM. Khóa AES dùng để bảo vệ private key được dẫn xuất từ mật khẩu mở kho bằng Argon2id; mật khẩu này không được gửi lên máy chủ. Khi mở kho, private key được nhập lại dưới dạng không thể xuất và giữ trong bộ nhớ tab \cite{e2ee}.
+
+Mỗi tin nhắn trong chế độ E2EE dùng một khóa AES-256-GCM mới và IV ngẫu nhiên 12 byte. Client dùng mã định danh tin nhắn làm dữ liệu xác thực bổ sung, rồi bọc khóa AES riêng cho public key của từng thiết bị đang hoạt động thuộc người nhận và người gửi. Envelope gửi đến server chứa ciphertext, IV, thuật toán và các bản khóa đã bọc; khóa AES dạng rõ không được lưu ở cơ sở dữ liệu \cite{e2ee}.
+
+\section{Luồng gửi và nhận}
+\begin{enumerate}
+\item Thiết bị gửi lấy danh sách public key đang hoạt động của các bên trong hội thoại.
+\item Trình duyệt tạo khóa AES mới, mã hóa payload, rồi dùng RSA-OAEP bọc khóa AES cho từng thiết bị.
+\item RelationshipService lưu envelope; thiết bị nhận tải envelope và chọn bản khóa đã bọc tương ứng với mình.
+\item Thiết bị nhận dùng private key để mở khóa AES, sau đó xác thực và giải mã payload bằng AES-GCM.
+\end{enumerate}
+
+\section{Thiết bị mới và lịch sử}
+Thiết bị mới phải được ghép nối và kích hoạt trước khi nhận khóa cho tin nhắn mới. Việc kích hoạt không tự mở được lịch sử cũ: một thiết bị đang hoạt động cần giải bọc khóa AES của từng tin và bọc lại cho thiết bị mới. Server lưu các wrapper bổ sung, gắn với dấu vân tay ciphertext để tránh trả wrapper không còn phù hợp sau khi tin được sửa \cite{e2ee}.
+
+\section{Giới hạn an toàn}
+Đây là nguyên mẫu mã hóa lai do đồ án triển khai. Hệ thống chưa có forward secrecy, cơ chế ratchet hoặc quy trình xác minh fingerprint giữa người dùng. Server cũng chưa chứng minh envelope bao gồm đầy đủ mọi thiết bị hợp lệ của hội thoại. Vì vậy không nên mô tả hệ thống như một giao thức E2EE đã được đánh giá độc lập \cite{relationship,e2ee}.
+
+\section{Giao diện chương trình}
+Phần này mô tả các màn hình tiêu biểu được xác nhận từ mã nguồn. Website hiện có trang đăng nhập, đăng ký, xác minh OTP, feed, hồ sơ, trang tin nhắn, cài đặt bảo mật và các trang quản trị. Trang tin nhắn hỗ trợ hội thoại trực tiếp/nhóm; phần cài đặt bảo mật hiển thị trạng thái khóa thiết bị và thao tác liên quan đến ghép nối, mở kho. Các màn hình này được xác nhận qua route và component trong mã nguồn website \cite{usecases,e2ee}.
+
+Báo cáo mô tả các màn hình xác nhận được qua route và component. Ảnh chụp giao diện từ một phiên chạy VinaSocial có thể bổ sung khi có dữ liệu thực nghiệm phù hợp.

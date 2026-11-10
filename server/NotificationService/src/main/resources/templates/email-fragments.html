@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<body>
+    <p class="text" th:fragment="greeting(firstName, lastName, email)">
+        Xin chào
+        <strong class="recipient-name"
+                th:text="${firstName != null && lastName != null ? firstName + ' ' + lastName : email}">bạn</strong>,
+    </p>
+
+    <table role="presentation" class="otp-box" width="100%" cellspacing="0" cellpadding="0" border="0"
+           th:fragment="otpBlock(label, code, expiredAt)">
+        <tr>
+            <td>
+                <div class="otp-label" th:text="${label}">Mã xác thực của bạn</div>
+                <div class="otp-code" th:text="${code}">000000</div>
+                <div class="otp-expire">
+                    Mã này sẽ hết hạn vào lúc: <strong th:text="${expiredAt}">--:--</strong>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <div class="security-note" th:fragment="securityNote(message)">
+        <strong>Lưu ý bảo mật:</strong>
+        <span th:text="${message}">Không chia sẻ mã xác thực với bất kỳ ai.</span>
+    </div>
+</body>
+</html>

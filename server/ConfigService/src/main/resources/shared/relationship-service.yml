@@ -1,0 +1,42 @@
+server:
+  port: 8082
+
+spring:
+  kafka:
+    consumer:
+      group-id: relationship-service
+
+  datasource:
+    url: jdbc:mysql://${SPRING_DATASOURCE_HOST:localhost}:3306/${SPRING_DATASOURCE_DATABASE:vinasocial_relationship}?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:123456}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+      generate_statistics: true
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
+
+  cloud:
+    openfeign:
+      client:
+        config:
+          default:
+            connect-timeout: 5000
+            read-timeout: 5000
+
+      circuitbreaker:
+        enabled: true
+
+      micrometer:
+        enabled: true

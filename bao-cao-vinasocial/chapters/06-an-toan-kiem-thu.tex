@@ -1,0 +1,72 @@
+\chapter{Đánh giá an toàn và kiểm thử}
+\section{Mô hình đe dọa và ranh giới bảo vệ}
+\subsection{Tài sản và tác nhân}
+Các tài sản cần bảo vệ gồm nội dung tin nhắn, tệp đính kèm, khóa AES của từng tin, private key thiết bị, OTP 2FA và thông tin phiên đăng nhập. Mô hình xét người nghe lén đường truyền, người đọc được dữ liệu server, người chiếm quyền tài khoản, người có quyền truy cập browser profile và máy chủ phân phối public key sai. Các tác nhân này có năng lực khác nhau; một biện pháp bảo vệ không giải quyết tất cả.
+
+\begin{longtable}{p{0.25\textwidth}p{0.32\textwidth}p{0.35\textwidth}}
+\caption{Đe dọa, biện pháp trong mã nguồn và rủi ro còn lại}\label{tab:de-doa}\\
+\toprule
+Đe dọa & Biện pháp hiện có & Rủi ro còn lại \\
+\midrule
+\endfirsthead
+\toprule Đe dọa & Biện pháp hiện có & Rủi ro còn lại \\ \midrule
+\endhead
+Đọc dữ liệu tin nhắn ở server & Khi E2EE bật, client gửi envelope AES-GCM; khóa AES được bọc RSA theo thiết bị. & Metadata vẫn hiện với server. Khi người dùng tắt E2EE, nội dung không còn được bảo vệ theo cơ chế này. \\
+Sửa ciphertext trên đường đi hoặc trong kho lưu & AES-GCM xác thực ciphertext, IV và AAD; giải mã thất bại khi tag không đúng. & Không bảo vệ nếu client đã bị sửa hoặc plaintext bị lộ trước khi mã hóa. \\
+Lộ bản lưu private key ở browser profile & Thiết bị mới dùng Argon2id và AES-GCM để mã hóa PKCS\#8 trong IndexedDB. & Mật khẩu yếu, thiết bị đang mở khóa hoặc mã độc chạy trong browser vẫn là nguy cơ. Bản ghi legacy có cơ chế lưu khác. \\
+Thay public key thiết bị & Client ghi nhớ khóa đã thấy theo device ID và từ chối thay đổi bất thường. & Chưa có quy trình xác minh fingerprint qua kênh độc lập; lần nhận khóa đầu vẫn phải tin nguồn phân phối. \\
+Lộ private key của một thiết bị & Các bản bọc khóa được tách theo thiết bị; có API thu hồi khóa cho lần gửi sau. & Không có forward secrecy; ciphertext cũ đã bọc cho thiết bị bị lộ vẫn có nguy cơ bị giải mã. \\
+Mất thiết bị hoặc browser storage & Có quy trình ghép nối thiết bị và chuyển wrapper lịch sử từ thiết bị còn hoạt động. & Nếu mất thiết bị cuối cùng giữ khóa phù hợp, lịch sử có thể không phục hồi được. \\
+Lộ bản sao bảng OTP & OTP mới được mã hóa AES-GCM trước khi lưu; challenge có hạn dùng, số lần thử và trạng thái đã xác minh. & Mã OTP dạng rõ vẫn đi qua Kafka để gửi; quyền truy cập topic và khóa mã hóa cần được bảo vệ. \\
+\bottomrule
+\end{longtable}
+
+\subsection{Phạm vi kết luận bảo mật}
+Mô hình trên mô tả cơ chế có trong mã nguồn, không phải kết quả kiểm định độc lập. Nó giả định trình duyệt chạy mã client đúng, bộ sinh ngẫu nhiên an toàn và thiết bị người dùng không bị xâm nhập. Mã hóa đầu cuối chỉ áp dụng cho tin nhắn được gửi trong chế độ E2EE; server vẫn có thể biết người gửi, người nhận, thời điểm và các metadata cần để vận hành hệ thống \cite{e2ee,relationship}.
+
+\section{Kiểm thử và bằng chứng}
+\subsection{Unit test đã chạy}
+Ngày 02/11/2026, các lớp unit test sẵn có được chạy bằng Gradle ở chế độ offline. Kết quả XML của JUnit ghi nhận 7 ca, không có ca lỗi hoặc bị bỏ qua. Bảng~\ref{tab:unit-test} chỉ mô tả phạm vi các ca đã chạy; nó không chứng minh toàn bộ luồng gửi nhận giữa hai trình duyệt hoạt động đúng.
+
+\begin{table}[htbp]
+\centering
+\caption{Kết quả unit test liên quan đến E2EE}\label{tab:unit-test}
+\begin{tabular}{p{0.51\textwidth}p{0.16\textwidth}p{0.23\textwidth}}
+\toprule
+Lớp kiểm thử & Số ca & Kết quả \\
+\midrule
+\texttt{E2eeEnvelopeValidationUtilTest} & 3 & Đạt 3/3 \\
+\texttt{MessageEncryptionSettingServiceTest} & 2 & Đạt 2/2 \\
+\texttt{MediaServiceEncryptionPolicyTest} & 2 & Đạt 2/2 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Các ca trên kiểm tra envelope hợp lệ, từ chối plaintext khi chế độ mã hóa bật, từ chối envelope khi chế độ tắt và từ chối một số tổ hợp cờ media không hợp lệ. Chưa có unit test OTP được chạy trong đợt kiểm thử này; các kịch bản 2FA ở bảng kế tiếp là kế hoạch kiểm thử tích hợp. Chúng không giải mã tin thật, không kiểm tra ghép nối đa thiết bị và không đo hiệu năng \cite{tests}.
+
+\subsection{Kịch bản kiểm thử tích hợp cần thực hiện}
+Website và Gateway không mở ở các cổng local 3000/8080 tại thời điểm soạn báo cáo, nên các kịch bản dưới đây là kế hoạch kiểm thử với kết quả mong đợi, \textbf{chưa phải kết quả quan sát}.
+
+\begin{longtable}{p{0.09\textwidth}p{0.43\textwidth}p{0.38\textwidth}}
+\caption{Kịch bản kiểm thử trên hệ thống chạy thực tế}\label{tab:manual-test}\\
+\toprule
+ID & Thao tác & Kết quả mong đợi \\
+\midrule
+\endfirsthead
+\toprule ID & Thao tác & Kết quả mong đợi \\ \midrule
+\endhead
+KT01 & Hai tài khoản đăng nhập trên hai browser profile, bật E2EE và trao đổi tin. & Hai bên đọc được tin; request và bản ghi server chứa envelope, không chứa nội dung rõ. \\
+KT02 & Sửa một byte ciphertext hoặc IV của tin đã lưu, tải lại tin. & Client từ chối giải mã do xác thực AES-GCM thất bại. \\
+KT03 & Đăng nhập trên thiết bị mới, chưa ghép nối, mở lịch sử cũ. & Thiết bị mới không tự mở được lịch sử chưa có wrapper phù hợp. \\
+KT04 & Duyệt ghép nối, chuyển wrapper lịch sử từ thiết bị cũ. & Thiết bị mới mở được những tin có wrapper đã chuyển; server không nhận khóa AES dạng rõ. \\
+KT05 & Tắt E2EE trong cài đặt và gửi một tin thử. & Server chấp nhận nội dung theo chế độ không mã hóa; báo cáo không gọi trường hợp này là E2EE. \\
+KT06 & Gửi tệp khi E2EE bật, kiểm tra object trên MediaService. & Object lưu là bytes đã mã hóa; khóa và IV mở tệp nằm trong payload message E2EE. \\
+KT07 & Bật 2FA, đăng nhập bằng mật khẩu đúng nhưng chưa nhập OTP. & Chỉ nhận challenge; chưa có token đăng nhập. \\
+KT08 & Nhập OTP đúng trong 90 giây, sau đó thử dùng lại. & Lần đầu được cấp phiên; lần sau bị từ chối vì challenge đã xác minh. \\
+KT09 & Nhập sai OTP năm lần hoặc nhập sau hạn dùng. & Challenge bị từ chối; không cấp token. \\
+KT10 & Kiểm tra bản ghi \texttt{auth\_otps} và sự kiện gửi mã. & Cột \texttt{code} của OTP mới là bản mã AES-GCM; sự kiện Kafka chứa mã rõ để NotificationService gửi. \\
+\bottomrule
+\end{longtable}
+
+\subsection{Minh chứng giao diện cần chụp}
+Để hoàn thiện minh chứng thực nghiệm, cần ảnh từ một phiên chạy VinaSocial: màn hình đăng nhập và xác minh OTP, trang feed/hồ sơ, hội thoại E2EE, trạng thái kho khóa thiết bị, thao tác ghép nối/chuyển lịch sử và bản ghi ciphertext trong cơ sở dữ liệu. Ảnh phải được lấy từ phiên chạy của chính đồ án và che thông tin cá nhân hoặc khóa nhạy cảm trước khi đưa vào báo cáo. Hiện chưa có ảnh như vậy trong workspace, nên báo cáo không gắn ảnh WebChat của tài liệu mẫu vào VinaSocial.

@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{email-layout :: layout('Mã xác thực bảo mật', ~{::emailContent})}">
+<body>
+    <th:block th:fragment="emailContent">
+        <th:block th:replace="~{email-fragments :: greeting(${firstName}, ${lastName}, ${email})}"></th:block>
+        <p class="text">
+            Mã OTP để <strong th:text="${purpose}">xác thực bảo mật</strong> tài khoản VinaSocial của bạn là:
+        </p>
+        <th:block th:replace="~{email-fragments :: otpBlock('Mã xác thực bảo mật', ${code}, ${expiredAt})}"></th:block>
+        <th:block th:replace="~{email-fragments :: securityNote('Không chia sẻ mã OTP này với bất kỳ ai. Nếu bạn không thực hiện thao tác này, hãy đổi mật khẩu và kiểm tra các phiên đăng nhập.')}"></th:block>
+    </th:block>
+</body>
+</html>

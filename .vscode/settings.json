@@ -1,0 +1,7 @@
+{
+  "java.project.sourcePaths": [
+    "server/user-service/src/main/java/java/vn/tuhoc/user_service",
+    "server/ContentService/src/main/java/vn/tuhoc/ContentService"
+  ],
+  "java.configuration.updateBuildConfiguration": "automatic"
+}
